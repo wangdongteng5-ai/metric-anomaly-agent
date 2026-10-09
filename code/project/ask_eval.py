@@ -1,11 +1,15 @@
 # ask_eval.py —— M8 自由追问评估：执行准确率（模型 SQL 的执行结果 = 标准答案 SQL 的执行结果，才算对）
-# 运行：python code\project\ask_eval.py gold（只跑标准答案，验收用，不调模型）｜python code\project\ask_eval.py（正式跑，只能跑一次）
-import math, sys, duckdb, pandas as pd
-from ask import ask
+# 运行：python code\project\ask_eval.py [题集] [版本] [gold]　例：ask_eval.py 追问测试集_v2 v1 gold（只跑标准答案）｜ask_eval.py 追问开发集 v2
+# 题集默认 追问测试集、版本默认 v1（= 第一次正式运行）；v1 = ask_v1.py（冻结），v2 = ask.py；开发集可反复跑，其他题集只能跑一次
+import importlib, math, sys, duckdb, pandas as pd
 from semantic import ROOT, DB
 
 WEEK, CAUSE = "2017-07-24", ("main_store_group", "腰部")      # 固定评测上下文（出题时定，不改）
-TEST, OUT = ROOT / "docs" / "追问测试集.csv", ROOT / "data" / "ask_eval_v1.csv"
+args = [a for a in sys.argv[1:] if a != "gold"] + [None, None]
+SET, VER = args[0] or "追问测试集", args[1] or "v1"
+ask = importlib.import_module({"v1": "ask_v1", "v2": "ask"}[VER]).ask
+TEST = ROOT / "docs" / f"{SET}.csv"
+OUT = ROOT / "data" / (f"ask_eval_{VER}.csv" if SET == "追问测试集" else f"ask_eval_{SET}_{VER}.csv")
 
 def cell(x):                                                   # 数值统一成 float，空值统一成 None，其他转字符串
     if x is None or (isinstance(x, float) and math.isnan(x)): return None
@@ -25,8 +29,8 @@ with duckdb.connect(str(DB), read_only=True) as con:          # 第 1 步：标�
     for t in test.itertuples():
         if t.标准SQL != "REFUSE": gold[t.id] = con.execute(t.标准SQL).df()
         print(f"\n{t.id} {t.问题}\n{gold.get(t.id, 'REFUSE')}")
-if sys.argv[1:] == ["gold"]: sys.exit()
-if OUT.exists(): sys.exit(f"{OUT.name} 已存在：测试集只跑一次。改了系统要换版本号，并先预注册")
+if "gold" in sys.argv: sys.exit()
+if OUT.exists() and "开发" not in SET: sys.exit(f"{OUT.name} 已存在：测试集只跑一次。改了系统要换版本号，并先预注册")
 
 rows = []
 for t in test.itertuples():                                    # 第 2 步：逐题调 ask（不生成解读，只比 SQL 结果）

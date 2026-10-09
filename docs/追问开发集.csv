@@ -1,0 +1,5 @@
+﻿id,难度,考点,问题,标准SQL,看顺序
+D01,中等,门店分组 vs 主力门店（冒烟题）,这周腰部门店卖了多少单？,SELECT COUNT(DISTINCT basket_id) FROM fact WHERE wk = DATE '2017-07-24' AND store_group = '腰部',否
+D02,中等,中文 → 取值（熟食 = DELI）,这周买了熟食的家庭有多少户？,SELECT COUNT(DISTINCT household_id) FROM fact WHERE wk = DATE '2017-07-24' AND department = 'DELI',否
+D03,中等,中文 → 取值（中年 = 35-54岁）,这周中年家庭的 GMV 是多少？,SELECT SUM(sales_value) FROM fact WHERE wk = DATE '2017-07-24' AND age_band = '35-54岁',否
+D04,中等,门店分组 vs 主力门店,这周长尾门店的 GMV 是多少？,SELECT SUM(sales_value) FROM fact WHERE wk = DATE '2017-07-24' AND store_group = '长尾',否

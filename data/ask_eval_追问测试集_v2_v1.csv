@@ -1,0 +1,17 @@
+﻿id,难度,考点,对,原因,尝试,模型SQL,报错,模型结果前5行
+T01,中等,门店分组 vs 主力门店（上下文也是腰部）；客单价口径,False,结果不同,1,SELECT SUM(sales_value) / COUNT(DISTINCT basket_id) AS aov FROM fact WHERE wk = DATE '2017-07-24' AND main_store_group = '腰部' AND sales_value > 0 AND quantity > 0,,"         aov
+0  26.896758"
+T02,中等,门店分组 vs 主力门店（438 vs 385 户）,True,,1,SELECT COUNT(DISTINCT household_id) AS active_hh FROM fact WHERE store_group = '头部' AND wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"   active_hh
+0        438"
+T03,中等,中文 → 取值（肉 = 鲜肉 + 包装肉）,False,结果不同,1,SELECT COUNT(DISTINCT household_id) AS active_hh FROM fact WHERE department = '肉' AND wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"   active_hh
+0          0"
+T04,中等,中文 → 取值（蔬菜水果 = PRODUCE）,False,结果不同,1,SELECT SUM(sales_value) AS gmv FROM fact WHERE wk = DATE '2017-07-24' AND department = 'GROCERY' AND product_category = 'FRESH VEGETABLES AND FRUITS' AND quantity > 0 AND sales_value > 0,,"   gmv
+0  NaN"
+T05,中等,中文 → 取值（年轻 = 34岁及以下）；每户 GMV 口径,False,结果不同,1,SELECT SUM(sales_value) / COUNT(DISTINCT household_id) AS gmv_per_hh FROM fact WHERE wk = DATE '2017-07-24' AND age_band IS NOT NULL,,"   gmv_per_hh
+0   80.219784"
+T06,中等,中文 → 取值（高收入 = 高(75K+)）,False,结果不同,1,SELECT SUM(sales_value) AS gmv FROM fact WHERE wk = DATE '2017-07-24' AND income_band IS NOT NULL AND income_band = '高收入' AND quantity > 0 AND sales_value > 0,,"   gmv
+0  NaN"
+T07,中等,中文 → 取值（加油 = FUEL）,False,结果不同,1,SELECT SUM(sales_value) AS gmv FROM fact WHERE wk = DATE '2017-07-24' AND product_category = '加油' AND quantity > 0 AND sales_value > 0,,"   gmv
+0  NaN"
+T08,难,中文 → 取值（海鲜 = 鲜 + 包装）；跨周,False,结果不同,1,"SELECT SUM(CASE WHEN wk = DATE '2017-07-24' AND department = '海鲜' THEN sales_value ELSE 0 END) AS 本周, SUM(CASE WHEN wk = DATE '2017-07-17' AND department = '海鲜' THEN sales_value ELSE 0 END) AS 上周 FROM fact WHERE quantity > 0 AND sales_value > 0",,"    本周   上周
+0  0.0  0.0"

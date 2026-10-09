@@ -1,0 +1,9 @@
+﻿id,难度,考点,对,原因,尝试,模型SQL,报错,模型结果前5行
+D01,中等,门店分组 vs 主力门店（冒烟题）,True,,1,SELECT COUNT(DISTINCT basket_id) AS orders FROM fact WHERE store_group = '腰部' AND wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"   orders
+0    1960"
+D02,中等,中文 → 取值（熟食 = DELI）,False,结果不同,1,SELECT COUNT(DISTINCT household_id) AS active_hh FROM fact WHERE department = '熟食' AND wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"   active_hh
+0          0"
+D03,中等,中文 → 取值（中年 = 35-54岁）,False,结果不同,1,SELECT SUM(sales_value) AS gmv FROM fact WHERE wk = DATE '2017-07-24' AND age_band IS NOT NULL AND age_band = '中年' AND quantity > 0 AND sales_value > 0,,"   gmv
+0  NaN"
+D04,中等,门店分组 vs 主力门店,True,,1,SELECT SUM(sales_value) AS gmv FROM fact WHERE store_group = '长尾' AND wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"       gmv
+0  2109.59"

@@ -1,0 +1,9 @@
+﻿id,难度,考点,问题,标准SQL,看顺序
+T01,中等,门店分组 vs 主力门店（上下文也是腰部）；客单价口径,这周腰部门店的客单价是多少？,SELECT SUM(sales_value) / COUNT(DISTINCT basket_id) FROM fact WHERE wk = DATE '2017-07-24' AND store_group = '腰部',否
+T02,中等,门店分组 vs 主力门店（438 vs 385 户）,这周头部门店一共来了多少户？,SELECT COUNT(DISTINCT household_id) FROM fact WHERE wk = DATE '2017-07-24' AND store_group = '头部',否
+T03,中等,中文 → 取值（肉 = 鲜肉 + 包装肉）,这周买了肉的家庭有多少户？,"SELECT COUNT(DISTINCT household_id) FROM fact WHERE wk = DATE '2017-07-24' AND department IN ('MEAT', 'MEAT-PCKGD')",否
+T04,中等,中文 → 取值（蔬菜水果 = PRODUCE）,这周蔬菜水果卖了多少钱？,SELECT SUM(sales_value) FROM fact WHERE wk = DATE '2017-07-24' AND department = 'PRODUCE',否
+T05,中等,中文 → 取值（年轻 = 34岁及以下）；每户 GMV 口径,这周年轻家庭的每户 GMV 是多少？,SELECT SUM(sales_value) / COUNT(DISTINCT household_id) FROM fact WHERE wk = DATE '2017-07-24' AND age_band = '34岁及以下',否
+T06,中等,中文 → 取值（高收入 = 高(75K+)）,这周高收入的人花了多少钱？,SELECT SUM(sales_value) FROM fact WHERE wk = DATE '2017-07-24' AND income_band = '高(75K+)',否
+T07,中等,中文 → 取值（加油 = FUEL）,这周加油花了多少钱？,SELECT SUM(sales_value) FROM fact WHERE wk = DATE '2017-07-24' AND department = 'FUEL',否
+T08,难,中文 → 取值（海鲜 = 鲜 + 包装）；跨周,这周和上周海鲜各卖了多少钱？只返回两列：本周、上周。,"SELECT SUM(sales_value) FILTER (WHERE wk = DATE '2017-07-24'), SUM(sales_value) FILTER (WHERE wk = DATE '2017-07-17') FROM fact WHERE department IN ('SEAFOOD', 'SEAFOOD-PCKGD') AND wk IN (DATE '2017-07-24', DATE '2017-07-17')",是

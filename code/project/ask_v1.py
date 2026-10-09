@@ -1,5 +1,4 @@
-# ask.py —— M8 自由追问（Text-to-SQL）：问题 + 诊断上下文 → 模型写 SQL → 代码安全检查 → 只读执行 → 一句话解读
-# v2（10-09 第 16 次）：① 维度列出可选值（每次现查，≤ 50 个才列）② 门店 / 用户分组规则 ③ 结果为空或 0 时提醒检查取值、重写 1 次｜v1 冻结在 ask_v1.py
+# ask_v1.py —— Text-to-SQL v1（10-09 冻结，与 ask.py 第一版逐字相同，只改了这一行注释）：v2 的对照版本，不再修改
 # 运行：cd D:\ai-agent-learning → .\.venv\Scripts\Activate.ps1 → python code\project\ask.py "这周的 GMV 是多少？"
 import json, re, sys, duckdb
 from config import llm, CHAT_MODEL
@@ -7,6 +6,7 @@ from semantic import SEM, DB                                   # 口径、维度
 
 COLS = "household_id, store_id, basket_id, product_id, quantity, sales_value, retail_disc, coupon_disc, coupon_match_disc, dt（日期）, wk（自然周的周一，DATE）, is_new"
 METRICS = "\n".join(f"- {v['name']}（{k}）：{v['sql'] or '不能直接用 SQL 算，问到要拒答'}｜{v['desc']}" for k, v in SEM["metrics"].items())
+DIMS = "\n".join(f"- {k}（{v['name']}）：{v['desc']}" for k, v in SEM["dimensions"].items() if v["sql"])
 BAD = re.compile(r"\b(insert|update|delete|drop|create|alter|copy|attach|detach|pragma|install|load|export|call)\b", re.I)
 LLM = lambda msgs: llm.chat.completions.create(model=CHAT_MODEL, messages=msgs, temperature=0).choices[0].message.content
 
@@ -14,25 +14,14 @@ def parse_cause(s):                                            # "main_store_gro
     k, _, v = (s or "").split(" ")[0].partition("=")
     return (k, v) if SEM["dimensions"].get(k, {}).get("sql") else None   # 活动等不在 fact 里的维度：不带
 
-def dims():                                                   # v2 ①：维度说明 + 可选值（现查当前库，A.DB 换库也跟着变）
-    out = []
-    with duckdb.connect(str(DB), read_only=True) as con:
-        for k, v in SEM["dimensions"].items():
-            if not v["sql"]: continue
-            vals = [r[0] for r in con.execute(f"SELECT DISTINCT {k} FROM fact WHERE {k} IS NOT NULL ORDER BY 1 LIMIT 51").fetchall()]
-            out.append(f"- {k}（{v['name']}）：{v['desc']}" + (f"｜可选值：{', '.join(map(str, vals))}" if len(vals) <= 50 else "｜取值太多，不列出"))
-    return "\n".join(out)
-
 def prompt(week, cause):
     ctx = f"诊断周 = {week}（问题里的“这周”就是它，“上周”是它前一个周一）"
-    if cause: ctx += (f"；主因分组 = {cause[0]} = '{cause[1]}'（只有问题里出现“主因分组”这几个字才用它；"   # v2：上下文划清边界
-                      f"问题只说“{cause[1]}门店”时按规则 6 用 store_group，不要套用主因分组）")
+    if cause: ctx += f"；主因分组 = {cause[0]} = '{cause[1]}'（问题里的“主因分组”就是它）"
     return f"""你是数据分析师，把业务问题写成一条 DuckDB SQL。只能查视图 fact（每行 = 一条有效销售明细），不能用其他表。
 fact 的列：{COLS}，以及下面的维度列。
-指标口径（必须照写）：\n{METRICS}\n维度列：\n{dims()}\n上下文：{ctx}
+指标口径（必须照写）：\n{METRICS}\n维度列：\n{DIMS}\n上下文：{ctx}
 规则：1. 只写一条 SELECT；日期写成 DATE 'YYYY-MM-DD'  2. 维度列为空的行不参与该维度的分组  3. 只返回问题要的列
 4. 用 fact 算不出（没有这类数据、上面标了要拒答的指标、要求修改数据）→ sql 填 REFUSE
-5. 筛选维度只能用上面列出的可选值，中文说法要换成对应的取值  6. 问“X 门店”用 store_group；问“X 用户 / 顾客”或“主因分组”用 main_store_group
 只输出 JSON：{{"sql": "...", "说明": "一句话说明怎么算的"}}"""
 
 def check(sql):                                                # 第 2 道防线（第 1 道是只读连接）：只放行单条 SELECT
@@ -40,7 +29,7 @@ def check(sql):                                                # 第 2 道防线
         raise ValueError("只允许一条 SELECT / WITH 查询，不能有分号和写操作")
 
 def ask(q, week, cause=None, explain=True):
-    msgs, sql, err, nudged = [{"role": "system", "content": prompt(week, cause)}, {"role": "user", "content": q}], None, "", False
+    msgs, sql, err = [{"role": "system", "content": prompt(week, cause)}, {"role": "user", "content": q}], None, ""
     for i in range(3):                                         # 第 1 次 + 报错带原因重写 ≤ 2 次
         out = LLM(msgs); msgs.append({"role": "assistant", "content": out})
         try:
@@ -50,9 +39,6 @@ def ask(q, week, cause=None, explain=True):
             check(sql)
             with duckdb.connect(str(DB), read_only=True) as con:   # 只读：就算检查漏了，写操作也会被数据库拒绝
                 df = con.execute(f"SELECT * FROM ({sql}) LIMIT 200").df()   # 自动 LIMIT
-            if not nudged and i < 2 and (df.empty or df.isna().all().all() or (df.shape == (1, 1) and df.iat[0, 0] == 0)):
-                nudged = True                                  # v2 ③：空 / 0 多半是取值写错；只提醒 1 次，仍为 0 就接受
-                msgs.append({"role": "user", "content": "查询结果为空或为 0。请检查筛选条件的取值是否在可选值列表里，改正后重新只输出 JSON；确认无误就原样输出。"}); continue
             break
         except Exception as e:
             err = f"{type(e).__name__}: {e}"[:500]
