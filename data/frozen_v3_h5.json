@@ -1,0 +1,23 @@
+{
+  "版本": "v3_h5",
+  "时间": "2026-10-09T14:53:54",
+  "文件": {
+    "code/project/config.py": "40670a0bab72db6a6a06a4c49e9b81cb",
+    "code/project/semantic.py": "f00d364ccd4e4f599b7f5b921ad2170a",
+    "code/project/metrics.yaml": "19a4b929177f73005f8a8715895c0170",
+    "code/project/tools.py": "88a35036cc0f7a8eeef8dc644705086b",
+    "code/project/tool_spec.py": "fb078e491a3c170f7141850a39d36274",
+    "code/project/pipeline.py": "f134f2978f804e18cd623cde735bfb6d",
+    "code/project/prompt.py": "786fe07045c91cd5e86a54680afe286f",
+    "code/project/agent.py": "d88f9547db439d7e78f4537335ee217f",
+    "code/project/checks.py": "5396942a66aa729c40578bc5b050675a",
+    "code/project/audit.py": "c4f193ec964fe4a4c56c1ee3483e4928",
+    "code/project/plan.py": "7aacfa8cfcd99c6f7627e58dbed4cf46",
+    "code/project/audience.py": "a6746aa62cc57ea02d4a7a3eb50758ac",
+    "code/project/experiment.py": "aed834793fe603cfd459805f684e8807",
+    "code/project/playbook.py": "30873e38bf431895cc23243b7e43469c",
+    "code/project/playbook.yaml": "3872c11fbc49ec1ab3eb10320d7f56fc",
+    "code/project/baseline.py": "2eca60d140c58b649083398a73178ab5",
+    "docs/策略手册.md": "1bf688f65cfa6bcc347e5d55783d9fda"
+  }
+}

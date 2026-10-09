@@ -19,6 +19,7 @@ EMPTY_OK = {"demographics": "年龄 / 收入维度（metrics.yaml 里把 age_ban
 os.chdir(s.ROOT)                                       # adapter.sql 里的相对路径以项目根目录为准
 con = duckdb.connect(str(s.DB))
 con.execute((s.HERE / "adapter.sql").read_text(encoding="utf-8"))
+s.resolve_valid_to(con)                                # h5：valid_to: auto 时，按刚接入的数据确定最后一个完整周
 err, warn = [], []
 for t, cols in CONTRACT.items():                       # ① 结构：表、列、类型
     have = dict(con.execute(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{t}'").fetchall())
@@ -43,4 +44,4 @@ for x in warn: print("⚠️", x)
 for x in err: print("❌", x)
 if err: sys.exit("数据契约未通过：改 adapter.sql 后重跑")
 s.build_fact(con)
-print(f"✅ {s.DATASET} 接入完成：{rows:,} 行、{weeks} 个有效周 → {s.DB}；.env 加 DATASET={s.DATASET} 后即可诊断")
+print(f"✅ {s.DATASET} 接入完成：{rows:,} 行、{weeks} 个有效周（最后一周 {s.SEM['time']['valid_to']}）→ {s.DB}")

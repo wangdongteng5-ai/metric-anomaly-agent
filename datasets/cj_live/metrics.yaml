@@ -1,0 +1,43 @@
+# metrics.yaml（数据集 cj_live，M8 h5 10-09）：模拟上线——最后一周自动识别（分组按诊断周滚动，由 live.py 处理）；其余口径同 CJ
+# 原则：代码按这里拼 SQL；模型只选「指标名 / 维度名 / 周」，不自己写 SQL
+# M5（10-08）：维度 desc 会进工具说明书给模型看；customer_type 补新客 GMV 占比（M3 实测 0.2%）
+source: fact                       # semantic.py 生成的视图（有效销售行 + 各维度列）
+
+time:                              # 时间口径
+  column: wk                       # 自然周，周一开始
+  valid_from: "2017-01-02"         # 去掉首周（只有 1 天）
+  valid_to: auto                   # 自动 = 数据里最后一个 7 天都齐的周（新一周数据到达、重跑 connect.py 后自动纳入）
+
+  holidays:                        # "正常波动"判断用（M3 定稿：只收数据上有明显影响的周；注入时也避开这些周）
+    - {wk: "2017-11-20", name: 感恩节周, note: 感恩节 11-23，按天看自然连续 2 天跌超 30%（会误触发"数据问题"），整周跌幅在正常范围内（M3 收尾新增）}
+    - {wk: "2017-12-18", name: 圣诞前采购周, note: 含平安夜 12-24，节前囤货，GMV 环比 +31.6%（全年最高）}
+    - {wk: "2017-12-25", name: 圣诞周, note: 圣诞节当天无交易，只有 6 天，GMV 环比 -31.4%（节后回落）}
+
+quality:                           # 数据质量 3 个阈值（M3 在 CJ 上校准；M8 从 tools.py 移入，值不变；换数据集要重新校准）
+  无效行占比: 0.02                  # 金额或数量 ≤ 0 的行占比；CJ 正常约 0.8%
+  连续大跌天数: 2                   # 按天和上周同一天比 < -30% 的连续天数
+  门店变0占上周GMV: 0.05            # 本周 0 交易的门店，上周 GMV 占比
+
+metrics:                           # 指标：sql 是聚合表达式，作用在 fact 上
+  gmv:         {name: GMV,       unit: 美元, sql: "SUM(sales_value)", desc: 有效行（数量和金额都 > 0）的销售额之和}
+  orders:      {name: 订单数,    unit: 单,   sql: "COUNT(DISTINCT basket_id)", desc: 有效行的购物篮去重计数}
+  aov:         {name: 客单价,    unit: 美元, sql: "SUM(sales_value) / COUNT(DISTINCT basket_id)", desc: GMV ÷ 订单数}
+  discount:    {name: 折扣金额,  unit: 美元, sql: "SUM(retail_disc + coupon_disc + coupon_match_disc)", desc: 零售折扣 + 优惠券 + 优惠券匹配折扣（数据中均为正数）}
+  active_hh:   {name: 活跃家庭数, unit: 户,  sql: "COUNT(DISTINCT household_id)", desc: 本周有过有效购物的家庭数}
+  retention_rate: {name: 周留存率, unit: 比例, sql: null, desc: 上周活跃的家庭中本周仍有购物的占比（实测 52 周中位数约 72%）。跨两周计算，M4 在工具里实现。替换了原"复购率"：超市场景下复购率恒≈100%，无诊断价值}
+  churned_hh:  {name: 流失家庭数, unit: 户,  sql: null, churn_days: 28, desc: 截至周一，最近一次购物距今超过 28 天的家庭数（M4 在工具里实现，不是 fact 上的简单聚合）}
+  gmv_per_hh:  {name: 每户GMV, unit: 美元, sql: "SUM(sales_value) / COUNT(DISTINCT household_id)", desc: GMV ÷ 活跃家庭数}
+
+dimensions:                        # 维度：sql 是行级表达式，生成 fact 的一列
+  store_group:  {name: 门店分组, sql: "CASE WHEN sr.r <= 20 THEN '头部' WHEN sr.r <= 100 THEN '腰部' ELSE '长尾' END",
+                 desc: 按全年 GMV 排名：头部前 20 家（33%）、腰部 21～100 家（63%）、长尾其余 357 家（4%）}
+  main_store_group: {name: 主力门店, sql: "ms.main_group", desc: 用户属性：该家庭全年 GMV 最多的门店分组（头部/腰部/长尾），门店类异常按用户侧分析（M3 新增）}
+  department:   {name: 品类, sql: "p.department", desc: 商品表自带的部门}
+  product_category: {name: 细分品类, sql: "p.product_category", desc: 商品表自带的二级品类（303 个），在品类（department）之下}
+  customer_type: {name: 新老客, sql: "CASE WHEN is_new THEN '新客' ELSE '老客' END", valid_from: "2017-02-06",
+                 desc: 首次购物在本周 = 新客。数据从 2017-01-01 开始，前 5 周新客占比虚高（85% → 5%），2017-02-06 起才可用；新客只占 GMV 约 0.2%，承载不了 GMV 异常，不适合用来解释 GMV 变化}
+  age_band:     {name: 年龄段, sql: "CASE WHEN d.age IN ('19-24','25-34') THEN '34岁及以下' WHEN d.age IN ('35-44','45-54') THEN '35-54岁' WHEN d.age IS NOT NULL THEN '55岁及以上' END",
+                 desc: 只覆盖 801 户（32%）；无画像的家庭为空，不参与该维度下钻}
+  income_band:  {name: 收入段, sql: "CASE WHEN d.income IN ('Under 15K','15-24K','25-34K') THEN '低(<35K)' WHEN d.income IN ('35-49K','50-74K') THEN '中(35-74K)' WHEN d.income IS NOT NULL THEN '高(75K+)' END",
+                 desc: 同上，只覆盖 32% 的家庭}
+  rfm:          {name: RFM 分层, sql: null, desc: 按周一之前的最近购物、频次、金额计算，依赖时间点，M4 在工具里实现}

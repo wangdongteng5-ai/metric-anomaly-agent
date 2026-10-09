@@ -3,7 +3,7 @@
 # 运行：cd D:\ai-agent-learning → streamlit run code\project\app.py
 import html, json, os, subprocess, sys
 from pathlib import Path
-import pandas as pd, streamlit as st, yaml
+import duckdb, pandas as pd, streamlit as st, yaml
 from dotenv import dotenv_values
 import evidence as ev
 
@@ -50,7 +50,7 @@ def verdict(a, truth, sec):
         ok = act == truth[1]
         st.markdown(f'<p class="check {"ok" if ok else "bad"}">{"✓ 与答案一致" if ok else "✗ 与答案不一致"}：答案是 {e(truth[0])} → {e(truth[1])}</p>', unsafe_allow_html=True)
 
-def why_cause(a, trace, db, src, scope, week):
+def why_cause(a, trace, db, src, scope, week, trend=None):
     st.subheader("为什么是这个结论")
     ctx = next((json.loads(x["结果"]) for x in trace if x["工具"] == "候选清单"), None)
     if not ctx: st.info("由代码直接判定（数据质量 / 节假日 / 没有候选），没有进入模型复核。证据：" + "；".join(map(str, a.get("证据", [])))); return
@@ -58,7 +58,8 @@ def why_cause(a, trace, db, src, scope, week):
     c1.markdown("**GMV 变化拆成三个因子**"); c1.caption(f"户数 × 频次 × 客单价：三项相加 = GMV 变化额 {ctx['范围GMV变化额']:,.2f}")
     c1.altair_chart(ev.bars(pd.DataFrame(ctx["整体拆解"]), "因子", "贡献额"), width="stretch")
     if cause := ev.cause_of(a.get("主因")):
-        df = ev.weekly(db, src, scope, week, cause[2], cause); now, wow, vm, med = ev.stats(df, week)
+        df = pd.DataFrame(trend).assign(wk=lambda d: pd.to_datetime(d.wk)) if trend else ev.weekly(db, src, scope, week, cause[2], cause)
+        now, wow, vm, med = ev.stats(df, week)   # 现场诊断用 live.py 按滚动分组算好的趋势；回放直接查注入表
         c2.markdown(f"**主因分组：{html.escape(nice(a['主因']))}，近 16 周**")
         c2.caption(f"本周 {now:{FMT[cause[2]]}}｜环比 {wow:+.1%}｜比前 4 周中位数（虚线）{vm:+.1%}")
         c2.altair_chart(ev.trend(df, week, FMT[cause[2]], last=16, median=med), width="stretch")
@@ -95,8 +96,8 @@ def why_plan(card, nocard):
         c1.altair_chart(ev.bars(pd.DataFrame(mat["问题商品"][:8]), "分组", "GMV贡献额", height=220), width="stretch")
     with st.expander("方案卡全文"): st.markdown(card.partition("## 材料（代码计算）")[0])
 
-def show(a, trace, card, db, src, scope, week, truth=None, sec=None, nocard=""):
-    verdict(a or {}, truth, sec); why_cause(a or {}, trace, db, src, scope, week)
+def show(a, trace, card, db, src, scope, week, truth=None, sec=None, nocard="", trend=None):
+    verdict(a or {}, truth, sec); why_cause(a or {}, trace, db, src, scope, week, trend)
     if (a or {}).get("动作") != "不行动": why_plan(card, nocard)   # 正常波动不需要方案
     with st.expander("调用记录（轮 0 = 代码执行；轮 ≥ 1 = 模型复核时追加的查询）"):
         for x in trace: st.markdown(f"`轮 {x['轮']}` **{x['工具']}** `{json.dumps(x['参数'], ensure_ascii=False)}`")
@@ -105,8 +106,9 @@ mode = st.sidebar.radio("模式", ["诊断一周", "评估回放"], help="诊断
 if mode == "诊断一周":                                   # ===== 自选周：只用原始数据，不出现"题"；埋异常的题只在评估回放里看 =====
     sets = ["cj"] + sorted(p.parent.name for p in (ROOT / "datasets").glob("*/adapter.sql") if (DATA / f"{p.parent.name}.duckdb").exists())
     ds = st.sidebar.selectbox("数据集", sets, help="cj = 原始数据；其他是用 connect.py 接入的库")
-    db, T = DATA / f"{ds}.duckdb", yaml.safe_load(open((HERE if ds == "cj" else ROOT / "datasets" / ds) / "metrics.yaml", encoding="utf-8"))["time"]
-    weeks = [str(d.date()) for d in pd.date_range(T["valid_from"], T["valid_to"], freq="7D")][1:]
+    db = DATA / f"{ds}.duckdb"
+    with duckdb.connect(str(db), read_only=True) as c:     # h5：周列表从数据库读（yaml 里 valid_to 可能是 auto）
+        weeks = [str(w)[:10] for (w,) in c.execute("SELECT DISTINCT wk FROM fact ORDER BY 1").fetchall()][1:]
     st.title("选一周，看 GMV 为什么变了、该怎么办")
     week = overview(db, "fact", "全部", "2017-07-24" if "2017-07-24" in weeks else weeks[-1], weeks)
     has_key = bool(dotenv_values(ROOT / ".env").get("OPENROUTER_API_KEY"))
@@ -121,7 +123,7 @@ if mode == "诊断一周":                                   # ===== 自选周�
     if key in st.session_state:                         # 结果存在会话里：展开折叠区、切换后再回来都不会丢
         out, sec = st.session_state[key]
         show(out["res"]["回答"], out["res"]["trace"], out["card"], db, "fact", "全部", week, None, sec,
-             "没有方案卡：结论是\"不行动\"，或运行时没开 Ollama")
+             "没有方案卡：结论是\"不行动\"，或运行时没开 Ollama", out.get("趋势"))
     st.stop()
 
 @st.cache_data                                          # ===== 回放：同一个结果文件只读一次 =====

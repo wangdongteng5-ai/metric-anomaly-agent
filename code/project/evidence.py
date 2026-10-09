@@ -14,11 +14,13 @@ def where(dim, value, week):
     return f"{dim} = '{str(value).replace(chr(39), chr(39) * 2)}'"
 
 def weekly(db, src, scope, week, metric="GMV", cause=None):
-    """周序列：提问范围（+ 主因分组）内某指标每周的值"""
+    """周序列：提问范围（+ 主因分组）内某指标每周的值；db 可以是库文件路径，也可以是已打开的连接"""
     d, v = (scope.split("=", 1) if scope != "全部" else ("全部", ""))
     extra = where(cause[0], cause[1], week) if cause else "TRUE"
+    sql = f"SELECT wk, {MET[metric]} v FROM {src} WHERE {where(d, v, week)} AND {extra} GROUP BY 1 ORDER BY 1"
+    if hasattr(db, "execute"): return db.execute(sql).df()     # 传入的是已打开的连接（live.py：要用其中的临时视图 fact_asof）
     with duckdb.connect(str(db), read_only=True) as c:
-        return c.execute(f"SELECT wk, {MET[metric]} v FROM {src} WHERE {where(d, v, week)} AND {extra} GROUP BY 1 ORDER BY 1").df()
+        return c.execute(sql).df()
 
 def stats(df, week):
     """本周值、环比、vs 前 4 周中位数（与工具层同一口径）"""
