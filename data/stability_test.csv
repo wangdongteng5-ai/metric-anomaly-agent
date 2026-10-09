@@ -1,0 +1,11 @@
+﻿场景ID,第1次定位,第2次定位,第3次定位,动作,主因一致,动作一致,动作对(3次)
+C13,income_band=高(75K+) 的 客单价,income_band=高(75K+) 的 客单价,income_band=高(75K+) 的 客单价,提升客单价 / 提升客单价 / 提升客单价,True,True,0
+C14,main_store_group=长尾 的 客单价,income_band=中(35-74K) 的 客单价,department=GROCERY 的 GMV,提升客单价 / 提升客单价 / 排查商品,False,False,0
+C16,main_store_group=长尾 的 频次,camp=活动触达 的 户数,department=DELI 的 GMV,提升频次 / 补券 / 排查商品,False,False,0
+C17,age_band=55岁及以上 的 频次,age_band=55岁及以上 的 频次,age_band=55岁及以上 的 频次,提升频次 / 提升频次 / 提升频次,True,True,0
+S23,income_band=中(35-74K) 的 客单价,income_band=中(35-74K) 的 客单价,income_band=中(35-74K) 的 客单价,提升客单价 / 提升客单价 / 提升客单价,True,True,3
+S26,camp=活动触达 的 户数,camp=活动触达 的 户数,camp=活动触达 的 户数,召回流失家庭 / 补券 / 补券,True,False,2
+S27,age_band=34岁及以下 的 户数,age_band=34岁及以下 的 户数,age_band=34岁及以下 的 户数,召回流失家庭 / 召回流失家庭 / 召回流失家庭,True,True,3
+S33,department=PRODUCE 的 GMV,department=PRODUCE 的 GMV,department=PRODUCE 的 GMV,排查商品 / 排查商品 / 排查商品,True,True,3
+S35,department=GROCERY 的 GMV,department=GROCERY 的 GMV,department=GROCERY 的 GMV,排查商品 / 排查商品 / 排查商品,True,True,3
+S39,department=DRUG GM 的 GMV,department=DRUG GM 的 GMV,department=DRUG GM 的 GMV,排查商品 / 排查商品 / 排查商品,True,True,3

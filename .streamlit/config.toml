@@ -1,0 +1,6 @@
+# Streamlit 主题（M8 10-09）：在 D:\ai-agent-learning 下运行 streamlit run 时自动读取
+[theme]
+primaryColor = "#1C6E6A"                  # 按钮、开关、标签页下划线：诊断单的墨绿
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F5F4"      # 侧栏
+textColor = "#1F2D2B"

@@ -1,0 +1,23 @@
+﻿场景ID,真·主因,判·主因,真·定位,判·定位,真·动作,判·动作,主因对,定位对,动作对,校验通过,下钻维度,工具调用,拦截,轮数,秒
+S01,用户侧,商品侧,腰部,department=DELI 的 GMV,召回流失家庭,排查商品,False,False,False,True,store_group/department,4,1,6,50
+S02,用户侧,用户侧,35-54岁,store_group=腰部的户数,召回流失家庭,召回流失家庭,True,False,True,True,store_group/department,5,3,9,80
+S03,用户侧,用户侧,腰部,store_group=头部 的 客单价,提升频次,提升客单价,True,False,False,True,store_group,4,2,7,71
+S04,用户侧,用户侧,头部,store_group=头部的客单价,提升客单价,提升客单价,True,True,True,True,store_group/department,5,2,8,89
+S05,用户侧,正常波动,活动触达,无,补券,不行动,False,False,False,True,store_group/department,5,2,8,83
+S06,用户侧,商品侧,全部,department=DELI 的 户数,提升客单价,排查商品,False,,False,True,store_group/department,8,8,7,128
+S07,商品侧,正常波动,GROCERY,无,排查商品,不行动,False,False,False,True,store_group/department,8,7,7,185
+S08,商品侧,用户侧,GROCERY,main_store_group=腰部 的 客单价,排查商品,提升客单价,False,False,False,True,main_store_group,6,21,4,85
+S09,商品侧,用户侧,GROCERY+DRUG GM,store_group=腰部 的 客单价,排查商品,提升客单价,False,False,False,True,store_group,4,0,5,37
+S10,数据问题,用户侧,2017-08-22~2017-08-24,整体 的 频次,修数据,提升频次,False,,False,True,store_group/main_store_group,10,45,5,79
+S11,数据问题,用户侧,同一分片的一批门店（约15%GMV）,整体 的 户数,修数据,召回流失家庭,False,,False,True,store_group,4,0,5,37
+S12,数据问题,正常波动,MEAT-PCKGD,无,修数据,不行动,False,False,False,True,department,3,0,4,34
+S13,用户侧,用户侧,户数,整体 的 户数,召回流失家庭,召回流失家庭,True,True,True,True,age_band,3,0,4,38
+S14,用户侧,用户侧,频次,整体 的 频次,提升频次,提升频次,True,True,True,True,main_store_group,3,0,4,51
+S15,商品侧,用户侧,BEEF,整体 的 户数,排查商品,召回流失家庭,False,False,False,True,product_category,3,0,4,30
+S16,商品侧,用户侧,BEEF,store_group=长尾 的 客单价,排查商品,提升客单价,False,False,False,False,product_category/store_group,5,3,9,100
+S17,用户侧,正常波动,频次,无,提升频次,不行动,False,False,False,True,income_band/store_group,7,23,7,112
+C01,正常波动,用户侧,,store_group=腰部 的 客单价,不行动,提升客单价,False,,False,True,store_group/main_store_group,5,1,6,57
+C02,正常波动,用户侧,,整体 的 户数,不行动,召回流失家庭,False,,False,True,main_store_group/age_band,7,20,5,89
+C03,正常波动,用户侧,,main_store_group=头部 的 客单价,不行动,提升客单价,False,,False,True,main_store_group,6,21,5,173
+C04,正常波动,,,,不行动,,False,,False,False,,0,0,0,159
+C05,正常波动,正常波动,,无,不行动,不行动,True,,True,True,,1,0,2,15

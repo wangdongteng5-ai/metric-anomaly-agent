@@ -1,0 +1,11 @@
+﻿场景ID,真·主因,判·主因,真·定位,判·定位,真·动作,判·动作,主因对,定位对,动作对,代码版动作,代码版对,校验通过,判定,候选数,模型调用,拦截,丢弃,退回,轮数,秒,报错
+S23,用户侧,用户侧,中(35-74K),income_band=中(35-74K) 的 客单价,提升客单价,提升客单价,True,True,True,提升客单价,True,True,模型,14,0,1,0,0,2,49,
+S26,用户侧,用户侧,活动触达,camp=活动触达 的 户数,补券,补券,True,True,True,补券,True,True,模型,8,0,0,0,0,1,22,
+S27,用户侧,用户侧,34岁及以下,age_band=34岁及以下 的 户数,召回流失家庭,召回流失家庭,True,True,True,召回流失家庭,True,True,模型,7,0,0,0,0,1,29,
+S33,商品侧,商品侧,PRODUCE,department=PRODUCE 的 GMV,排查商品,排查商品,True,True,True,排查商品,True,True,模型,7,0,0,0,0,1,17,
+S35,商品侧,商品侧,GROCERY,department=GROCERY 的 GMV,排查商品,排查商品,True,True,True,提升客单价,False,True,模型,9,0,1,0,0,2,36,
+S39,商品侧,商品侧,DRUG GM,department=DRUG GM 的 GMV,排查商品,排查商品,True,True,True,排查商品,True,True,模型,4,0,0,0,0,1,23,
+C13,正常波动,用户侧,,income_band=高(75K+) 的 客单价,不行动,提升客单价,False,,False,提升客单价,False,True,模型,4,0,0,0,0,1,16,
+C14,正常波动,用户侧,,income_band=中(35-74K) 的 客单价,不行动,提升客单价,False,,False,提升客单价,False,True,模型,11,0,1,0,0,2,28,
+C16,正常波动,用户侧,,camp=活动触达 的 户数,不行动,补券,False,,False,补券,False,True,模型,4,0,1,0,1,3,43,
+C17,正常波动,用户侧,,age_band=55岁及以上 的 频次,不行动,提升频次,False,,False,提升频次,False,True,模型,2,0,0,0,0,1,17,

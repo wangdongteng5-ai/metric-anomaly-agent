@@ -1,0 +1,44 @@
+# playbook.yaml —— 策略手册里的"硬数字"，由代码读（build_audience 做规则校验、算预期影响）
+# v1（10-08 Morgan 确认 D1～D6；测试集前冻结）｜给人和模型看的说明在 docs\策略手册.md
+# 权益玩法是业务假设，数字后的注释写数据依据
+global:
+  churn_days: 28              # 流失天数 N（M2：购物间隔 95 分位 21 天、99 分位 51 天）
+  freq_cap_per_month: 2       # D3 每户每月最多被几个活动触达（实测多数月份 ≥3 个的户 ≤2%）
+  fatigue_min_campaigns: 5    # D2 退订近似：被触达 ≥5 个活动且 0 核销 → 排除（373 户，占 15.1%）
+  coupon_face: 1.0            # D5 活动券核销实测：中位 1.00、均值 0.97 美元（976 次可匹配到交易行）
+  max_cost_per_hh: 2.0        # D5 每户成本上限 = 券面额 p90（2.0 美元）
+  holdout_ratio: 0.2          # 6-4（10-08 Morgan）对照组比例；按 md5(实验名_户ID) % 100 分组，同一户跨周不换组
+redemption_rate:              # D4 户级核销率 = 核销过的户 ÷ 被触达的户（2017 全年实测）
+  A: 0.166
+  B: 0.065
+  C: 0.059
+actions:
+  召回流失家庭:
+    audience: 前 churn_days 天在该分组买过、本周 0 次购买   # 10-08 Morgan 选 A：B（连续 2 周）只圈到 S01 刚流失家庭的 18/72；浪费由对照组量化
+    benefit: 回归券 满 18 减 1（门槛 ≈ 全体客单价中位数 17.61）
+    coupons_per_hh: 1
+    rate: [B, A]              # 预期影响给区间：保守 B ～ 乐观 A
+    exclude: [fatigue, freq_cap]
+  提升频次:
+    audience: 本周来过、本周购物篮数 < 自己前 4 周周均
+    benefit: 4 周内再来 2 次，返 1 美元券
+    coupons_per_hh: 1
+    rate: [B, A]
+    exclude: [fatigue, freq_cap]
+  提升客单价:
+    audience: 本周来过、本周客单价 < 自己前 4 周客单价
+    benefit: 满额减 1 美元，门槛 = 该组前 4 周客单价中位数 × 1.2
+    coupons_per_hh: 1
+    rate: [B, A]
+    exclude: [fatigue, freq_cap]
+  补券:
+    audience: 被已结束活动触达过、本周购物篮数 < 自己前 4 周周均
+    benefit: 补发该活动同类券 1 张
+    coupons_per_hh: 1
+    rate: same_campaign       # 用该活动自己的历史核销率，算不出时退回 [B, A]
+    exclude: [fatigue, freq_cap]
+  排查商品: {output: 提问范围内 GMV 变化额最负的细分品类 / 商品 Top 20}
+  修数据: {output: 超线检查项 + 涉及日期 / 门店 + 影响 GMV}
+  不行动: {output: 正常波动说明 + 依据}
+impact:                       # 预期影响 = 名单户数 × 核销率 × 该组前 4 周户均客单价；成本 = 户数 × 核销率 × 张数 × 面额
+  basket_value: group_median_4w

@@ -1,0 +1,38 @@
+# .gitignore —— M8 8-3（10-09）白名单写法：先忽略全部，再逐个放行要公开的文件
+# 好处：以后在文件夹里新加的学习笔记、草稿默认不会被提交；要公开新文件时，必须在这里显式加一行
+/*
+
+# ---- 放行：项目说明 ----
+!/.gitignore
+!/LICENSE
+!/README.md
+!/数据说明.md
+!/.streamlit/
+!/docs/
+!/datasets/
+
+# ---- 放行：代码（只放 code/project，学习用的 Day*.py 和 code/agent 不放）----
+!/code/
+/code/*
+!/code/project/
+
+# ---- 放行：评估结果（数据库和原始数据不放，用 data_prep.py 重新生成）----
+!/data/
+/data/*
+!/data/manifest.csv
+!/data/manifest_test.csv
+!/data/eval_*.csv
+!/data/eval_*_trace.jsonl
+!/data/baseline_result.csv
+!/data/baseline_test.csv
+!/data/action_eval_test.csv
+!/data/stability_test.csv
+!/data/frozen_*.json
+!/data/plans/
+!/data/audience/
+
+# ---- 放行范围内也要排除的 ----
+.env
+__pycache__/
+*.duckdb
+*.duckdb.wal
