@@ -1,0 +1,28 @@
+﻿id,难度,考点,对,原因,尝试,模型SQL,报错,模型结果前5行
+Q01,简单,上下文,True,,1,SELECT SUM(sales_value) AS gmv FROM fact WHERE quantity > 0 AND sales_value > 0 AND wk = DATE '2017-07-24',,"       gmv
+0  84153.4"
+Q02,简单,上下文；口径陷阱（客单价按购物篮去重，不是行均值）,True,,1,SELECT SUM(sales_value) / COUNT(DISTINCT basket_id) AS aov FROM fact WHERE wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"         aov
+0  28.041786"
+Q03,简单,上下文；口径陷阱（折扣 = 三项之和）,True,,1,SELECT SUM(retail_disc + coupon_disc + coupon_match_disc) AS discount FROM fact WHERE wk = DATE '2017-07-24' AND quantity > 0 AND sales_value > 0,,"   discount
+0  14376.96"
+Q04,中等,上下文（主因分组）,True,,1,SELECT COUNT(DISTINCT household_id) AS active_hh FROM fact WHERE wk = DATE '2017-07-24' AND main_store_group = '腰部' AND household_id IS NOT NULL,,"   active_hh
+0        912"
+Q05,中等,上下文（主因分组）；Top N,True,,1,"SELECT department AS 品类, SUM(sales_value) AS GMV FROM fact WHERE wk = DATE '2017-07-24' AND main_store_group = '腰部' AND department IS NOT NULL GROUP BY department ORDER BY GMV DESC LIMIT 5",,"        品类       GMV
+0  GROCERY  26192.96
+1  DRUG GM   6862.35
+2     FUEL   4907.55
+3  PRODUCE   4066.77
+4     MEAT   3686.80"
+Q06,中等,空值维度（无画像家庭不参与）,True,,1,"SELECT age_band, SUM(sales_value) / COUNT(DISTINCT household_id) AS gmv_per_hh FROM fact WHERE wk = DATE '2017-07-24' AND age_band IS NOT NULL GROUP BY age_band",,"  age_band  gmv_per_hh
+0   35-54岁   85.270663
+1   55岁及以上   64.752404
+2   34岁及以下   78.615328"
+Q07,中等,口径陷阱（门店分组 store_group ≠ 主力门店 main_store_group）,True,,1,"SELECT store_group, COUNT(DISTINCT basket_id) AS orders FROM fact WHERE wk = DATE '2017-07-24' AND store_group IS NOT NULL GROUP BY store_group",,"  store_group  orders
+0          头部     946
+1          腰部    1960
+2          长尾      95"
+Q08,难,跨周（环比）；上下文（主因分组）；口径陷阱（客单价）,True,,1,"WITH this_week AS (SELECT SUM(sales_value) / COUNT(DISTINCT basket_id) AS aov FROM fact WHERE wk = DATE '2017-07-24' AND main_store_group = '腰部' AND sales_value > 0 AND quantity > 0), last_week AS (SELECT SUM(sales_value) / COUNT(DISTINCT basket_id) AS aov FROM fact WHERE wk = DATE '2017-07-17' AND main_store_group = '腰部' AND sales_value > 0 AND quantity > 0) SELECT ROUND((this_week.aov - last_week.aov) / last_week.aov * 100, 2) AS aov_change_percent FROM this_week, last_week",,"   aov_change_percent
+0               -3.03"
+Q09,难,跨周（前 4 周中位数）,True,,1,"WITH weekly_gmv AS (SELECT wk, SUM(sales_value) AS gmv FROM fact WHERE quantity > 0 AND sales_value > 0 GROUP BY wk), median_gmv AS (SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY gmv) AS median_gmv FROM weekly_gmv WHERE wk BETWEEN DATE '2017-06-26' AND DATE '2017-07-17'), current_gmv AS (SELECT gmv FROM weekly_gmv WHERE wk = DATE '2017-07-24') SELECT ROUND((current_gmv.gmv - median_gmv.median_gmv) / median_gmv.median_gmv * 100, 2) AS gmv_change_percent FROM current_gmv, median_gmv",,"   gmv_change_percent
+0               -5.26"
+Q10,应拒答,数据里没有（App 行为数据）,True,,1,,,

@@ -1,0 +1,14 @@
+﻿id,难度,考点,问题,标准SQL,看顺序
+Q01,简单,上下文,这周的 GMV 是多少？,SELECT SUM(sales_value) FROM fact WHERE wk = DATE '2017-07-24',否
+Q02,简单,上下文；口径陷阱（客单价按购物篮去重，不是行均值）,这周的客单价是多少？,SELECT SUM(sales_value) / COUNT(DISTINCT basket_id) FROM fact WHERE wk = DATE '2017-07-24',否
+Q03,简单,上下文；口径陷阱（折扣 = 三项之和）,这周一共给了多少折扣金额？,SELECT SUM(retail_disc + coupon_disc + coupon_match_disc) FROM fact WHERE wk = DATE '2017-07-24',否
+Q04,中等,上下文（主因分组）,这周主因分组里有多少活跃家庭？,SELECT COUNT(DISTINCT household_id) FROM fact WHERE wk = DATE '2017-07-24' AND main_store_group = '腰部',否
+Q05,中等,上下文（主因分组）；Top N,这周主因分组里 GMV 最高的 5 个品类是哪些？只返回品类和 GMV 两列，按 GMV 从高到低。,"SELECT department, SUM(sales_value) AS gmv FROM fact WHERE wk = DATE '2017-07-24' AND main_store_group = '腰部' GROUP BY department ORDER BY gmv DESC LIMIT 5",是
+Q06,中等,空值维度（无画像家庭不参与）,这周各年龄段的每户 GMV 分别是多少？只返回年龄段和每户 GMV 两列。,"SELECT age_band, SUM(sales_value) / COUNT(DISTINCT household_id) FROM fact WHERE wk = DATE '2017-07-24' AND age_band IS NOT NULL GROUP BY age_band",否
+Q07,中等,口径陷阱（门店分组 store_group ≠ 主力门店 main_store_group）,这周头部、腰部、长尾三类门店各卖出了多少单？按门店本身的分组算，只返回门店分组和订单数两列。,"SELECT store_group, COUNT(DISTINCT basket_id) FROM fact WHERE wk = DATE '2017-07-24' GROUP BY store_group",否
+Q08,难,跨周（环比）；上下文（主因分组）；口径陷阱（客单价）,主因分组这周的客单价比上周变化了百分之几？结果用百分数表示，保留两位小数（如 -3.25）。,"WITH a AS (SELECT wk, SUM(sales_value) / COUNT(DISTINCT basket_id) AS aov FROM fact
+  WHERE main_store_group = '腰部' AND wk IN (DATE '2017-07-24', DATE '2017-07-17') GROUP BY wk)
+SELECT ROUND((MAX(aov) FILTER (WHERE wk = DATE '2017-07-24') / MAX(aov) FILTER (WHERE wk = DATE '2017-07-17') - 1) * 100, 2) FROM a",否
+Q09,难,跨周（前 4 周中位数）,这周的 GMV 比前 4 周 GMV 的中位数高或低百分之几？结果用百分数表示，保留两位小数。,"WITH w AS (SELECT wk, SUM(sales_value) AS g FROM fact WHERE wk BETWEEN DATE '2017-06-26' AND DATE '2017-07-24' GROUP BY wk)
+SELECT ROUND(((SELECT g FROM w WHERE wk = DATE '2017-07-24') / (SELECT MEDIAN(g) FROM w WHERE wk < DATE '2017-07-24') - 1) * 100, 2)",否
+Q10,应拒答,数据里没有（App 行为数据）,这周 App 的日活（DAU）是多少？,REFUSE,否

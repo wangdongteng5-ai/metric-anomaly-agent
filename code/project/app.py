@@ -1,5 +1,6 @@
 # app.py —— M8 指标异动诊断 Agent 演示页。回放：读已跑完的评估结果（不用 key）；现场：子进程跑 live.py（要 key，方案卡要 Ollama）
 # 8-1 回放｜8-2 现场 + 选数据集｜UI v2（10-09）：选周放到主区 + 两段数据依据（evidence.py）｜v3：默认"诊断一周"只按周选，题目只在"评估回放"里
+# 第 16 次对话（10-09）：诊断后加"继续追问"框（ask_box → ask.py，Text-to-SQL）
 # 运行：cd D:\ai-agent-learning → streamlit run code\project\app.py
 import html, json, os, subprocess, sys
 from pathlib import Path
@@ -102,6 +103,25 @@ def show(a, trace, card, db, src, scope, week, truth=None, sec=None, nocard="", 
     with st.expander("调用记录（轮 0 = 代码执行；轮 ≥ 1 = 模型复核时追加的查询）"):
         for x in trace: st.markdown(f"`轮 {x['轮']}` **{x['工具']}** `{json.dumps(x['参数'], ensure_ascii=False)}`")
 
+def ask_box(db, week, cause):                           # 诊断后自由追问：问题 + 本次诊断的周 / 主因 → ask.py 写 SQL → 只读执行
+    st.subheader("继续追问")
+    import ask as A                                     # 用到才导入：评估回放模式没有 key 也能打开页面
+    A.DB = db                                           # 查当前选中的数据集（不改 ask.py）
+    c = A.parse_cause(cause)
+    st.caption(f"上下文：这周 = {week}" + (f"｜主因分组 = {nice(f'{c[0]}={c[1]}')}" if c else "") +
+               "｜只读、只允许 SELECT｜注意：这里的主力门店按全年分组，数字可能与上面的诊断（按诊断周滚动分组）略有出入")
+    q, k = st.text_input("用一句话问数据", placeholder="例：这周主因分组里 GMV 最高的 5 个品类？"), ("ask", str(db), week)
+    if st.button("查询", disabled=not q):
+        with st.spinner("模型写 SQL → 代码检查 → 只读执行 → 一句话解读"): st.session_state[k] = (q, A.ask(q, week, c))
+    if k not in st.session_state: return
+    q0, r = st.session_state[k]
+    if r["拒答"]: st.warning(f"现有数据回答不了：{r['说明']}")
+    elif "报错" in r: st.error(f"改写 3 次仍报错：{r['报错']}"); st.code(r["sql"] or "", language="sql", wrap_lines=True)
+    else:
+        st.markdown(f"**{html.escape(q0)}**　{r['解读']}")
+        st.dataframe(r["结果"], hide_index=True)
+        with st.expander(f"模型写的 SQL（第 {r['尝试']} 次通过）"): st.code(r["sql"], language="sql", wrap_lines=True)
+
 mode = st.sidebar.radio("模式", ["诊断一周", "评估回放"], help="诊断一周：自己选数据集和周，当场诊断。评估回放：看测试集 / 开发集已跑完的结果")
 if mode == "诊断一周":                                   # ===== 自选周：只用原始数据，不出现"题"；埋异常的题只在评估回放里看 =====
     sets = ["cj"] + sorted(p.parent.name for p in (ROOT / "datasets").glob("*/adapter.sql") if (DATA / f"{p.parent.name}.duckdb").exists())
@@ -114,7 +134,7 @@ if mode == "诊断一周":                                   # ===== 自选周�
     has_key = bool(dotenv_values(ROOT / ".env").get("OPENROUTER_API_KEY"))
     key = (ds, week)
     if st.button(f"诊断 {week} 这周", type="primary", disabled=not has_key, help=None if has_key else ".env 里没有 OPENROUTER_API_KEY，只能看评估回放"):
-        with st.spinner("代码召回 → 模型复核 → 写方案卡（交给模型的周约 40～90 秒）"):
+        with st.spinner("代码召回 → 模型复核 → 写方案卡（约 40～90 秒）"):
             t0 = pd.Timestamp.now()
             p = subprocess.run([sys.executable, str(HERE / "live.py"), ds, week], capture_output=True,
                                text=True, encoding="utf-8", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
@@ -124,6 +144,7 @@ if mode == "诊断一周":                                   # ===== 自选周�
         out, sec = st.session_state[key]
         show(out["res"]["回答"], out["res"]["trace"], out["card"], db, "fact", "全部", week, None, sec,
              "没有方案卡：结论是\"不行动\"，或运行时没开 Ollama", out.get("趋势"))
+        ask_box(db, week, out["res"]["回答"].get("主因"))
     st.stop()
 
 @st.cache_data                                          # ===== 回放：同一个结果文件只读一次 =====

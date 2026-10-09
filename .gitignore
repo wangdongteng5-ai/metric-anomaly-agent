@@ -28,6 +28,7 @@
 !/data/action_eval_test.csv
 !/data/stability_test.csv
 !/data/frozen_*.json
+!/data/ask_eval_*.csv
 !/data/plans/
 !/data/audience/
 
